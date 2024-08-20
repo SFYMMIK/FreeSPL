@@ -1,3 +1,0 @@
-integrate utils:
-
-SRC=src/lexer.c src/parser.c src/codegen.c src/main.c src/gui.c src/requests.c src/error_handling.c src/utils.c
