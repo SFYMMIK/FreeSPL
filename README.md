@@ -14,15 +14,13 @@ FreeSPL/
 │   ├── c_core/
 │   │   ├── lexer.c
 │   │   ├── parser.c
-│   │   ├── memory.c (no content inside)
-│   │   └── math.c (still non-existent)
+│   │   └── memory.c (no content)
 │   ├── go_runtime/
 │   │   ├── runtime.go
 │   │   ├── error_handling.go (still non-existent)
 │   │   └── interpreter.go
 │   └── main.go
 └── build/
-    ├── Makefile
     └── build.sh
 ```
 
