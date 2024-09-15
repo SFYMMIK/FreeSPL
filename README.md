@@ -13,4 +13,6 @@ you can find the guide of syntax in the syntax.md file
 - Extensibility: As I add more features, ensuring the language remains flexible but simple might be challenging, especially if developers with different needs would start using it.
 
 ## syntax.md update:
-## little update to the syntax will be committed
+## little update to the syntax has been commited
+
+# And as of now, i am archiving this project and wont be developing it, but still will be looking for other program ideas.
