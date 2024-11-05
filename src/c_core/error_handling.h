@@ -1,6 +1,7 @@
 #ifndef ERROR_HANDLING_H
 #define ERROR_HANDLING_H
 
-void handle_error(const char *error_message);
+// Add function declarations here
+void handle_error(const char* msg);
 
-#endif
+#endif // ERROR_HANDLING_H

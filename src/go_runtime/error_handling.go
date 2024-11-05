@@ -1,10 +1,13 @@
 package main
 
 /*
+#include <stdlib.h>
 #include "error_handling.h"
 */
 import "C"
-import "unsafe"
+import (
+    "unsafe"
+)
 
 // checkError is a Go function that interfaces with the C error handler.
 func checkError(condition bool, message string) {
@@ -15,7 +18,7 @@ func checkError(condition bool, message string) {
     }
 }
 
-func main() {
+func testErrorHandling() {
     // Example usage of error handling
     var divisor int = 0
 

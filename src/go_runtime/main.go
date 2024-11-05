@@ -1,6 +1,9 @@
 package main
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
 
 /*
 #cgo CFLAGS: -I../c_core
@@ -9,7 +12,6 @@ import "fmt"
 #include "parser.h"
 */
 import "C"
-import "errors"
 
 // TokenType represents the type of a token.
 type TokenType int
@@ -180,22 +182,49 @@ func isKeyword(value string) bool {
 	return false
 }
 
+// run executes the AST
+func executeAST(node *ASTNode) {
+	if node == nil {
+		return
+	}
+
+	switch node.Token.Type {
+	case TOKEN_KEYWORD:
+		fmt.Println("Keyword:", node.Token.Value)
+	case TOKEN_IDENTIFIER:
+		fmt.Println("Identifier:", node.Token.Value)
+	case TOKEN_NUMBER:
+		fmt.Println("Number:", node.Token.Value)
+	case TOKEN_OPERATOR:
+		fmt.Println("Operator:", node.Token.Value)
+	case TOKEN_SYMBOL:
+		fmt.Println("Symbol:", node.Token.Value)
+	case TOKEN_EOF:
+		fmt.Println("End of File")
+	default:
+		fmt.Println("Unknown token:", node.Token.Value)
+	}
+
+	executeAST(node.Left)
+	executeAST(node.Right)
+	executeAST(node.Next)
+}
+
 // main function
-func main() {
+func mainFunction() {
 	code := `
-        int x = 5;
-        if (x > 3) {
-            x = x + 2;
-        } else {
-            x = x - 2;
-        }
-        while (x < 10) {
-            x = x + 1;
-        }
-    `
+		int x = 5;
+		if (x > 3) {
+			x = x + 2;
+		} else {
+			x = x - 2;
+		}
+		while (x < 10) {
+			x = x + 1;
+		}
+	`
 
 	tokens := lex(code)
 	ast := parse(tokens)
 	run(ast)
 }
-
