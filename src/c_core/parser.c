@@ -1,20 +1,23 @@
+#include "parser.h"
+#include "lexer.h"
+#include "token.h"
+#include "error_handling.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "lexer.c"  // Include lexer for token types
 
-typedef struct ASTNode {
-    Token token;
-    struct ASTNode* left;
-    struct ASTNode* right;
-    struct ASTNode* next;
-} ASTNode;
+ASTNode* parseBlock(Token** tokens, ParserError* error);
 
-typedef struct {
-    int line;
-    int column;
-    char message[256];
-} ParserError;
+ASTNode* createNode(ASTNodeType nodeType, Token token) {
+    ASTNode* node = (ASTNode*)malloc(sizeof(ASTNode));
+    node->nodeType = nodeType;
+    node->token = token;
+    node->left = NULL;
+    node->right = NULL;
+    node->next = NULL;
+    node->body = NULL;
+    return node;
+}
 
 void reportParserError(ParserError* error) {
     if (error != NULL) {
@@ -22,29 +25,146 @@ void reportParserError(ParserError* error) {
     }
 }
 
-ASTNode* createNode(Token token) {
-    ASTNode* node = (ASTNode*)malloc(sizeof(ASTNode));
-    node->token = token;
-    node->left = NULL;
-    node->right = NULL;
-    node->next = NULL;
-    return node;
+ASTNode* parseExpression(Token** tokens, ParserError* error) {
+    if ((*tokens)->type == TOKEN_EOF) {
+        snprintf(error->message, sizeof(error->message), "Unexpected end of file while parsing expression");
+        reportParserError(error);
+        return NULL;
+    }
+
+    ASTNode* left = createNode(AST_EXPRESSION, **tokens);
+    (*tokens)++;
+
+    if ((*tokens)->type == TOKEN_OPERATOR) {
+        Token op = **tokens;
+        (*tokens)++;
+        if ((*tokens)->type == TOKEN_EOF) {
+            snprintf(error->message, sizeof(error->message), "Expected right-hand side of operator '%s'", op.value);
+            reportParserError(error);
+            return left;
+        }
+        ASTNode* right = createNode(AST_EXPRESSION, **tokens);
+        (*tokens)++;
+
+        ASTNode* opNode = createNode(AST_EXPRESSION, op);
+        opNode->left = left;
+        opNode->right = right;
+        return opNode;
+    }
+
+    return left;
 }
 
-ASTNode* parseExpression(Token** tokens, ParserError* error);
-ASTNode* parseStatement(Token** tokens, ParserError* error);
-ASTNode* parseBlock(Token** tokens, ParserError* error);
+ASTNode* parseStatement(Token** tokens, ParserError* error) {
+    // Skip unexpected loose operators/symbols
+    while ((*tokens)->type == TOKEN_OPERATOR || (*tokens)->type == TOKEN_SYMBOL) {
+        (*tokens)++;
+    }
 
-ASTNode* parse(Token* tokens) {
-    ParserError error = {0, 0, ""};
-    return parseBlock(&tokens, &error);
+    Token token = **tokens;
+
+    if (token.type == TOKEN_KEYWORD) {
+        if (strcmp(token.value, "func") == 0) {
+            (*tokens)++;
+            Token funcName = **tokens;
+            (*tokens)++;
+
+            if (strcmp((*tokens)->value, "(") == 0) {
+                (*tokens)++;
+                while ((*tokens)->type != TOKEN_SYMBOL || strcmp((*tokens)->value, ")") != 0) {
+                    (*tokens)++;
+                }
+                (*tokens)++;
+
+                if (strcmp((*tokens)->value, "{") == 0) {
+                    (*tokens)++;
+                    ASTNode* funcNode = createNode(AST_FUNC_DEF, funcName);
+                    funcNode->body = parseBlock(tokens, error);
+                    return funcNode;
+                } else {
+                    snprintf(error->message, sizeof(error->message), "Expected '{' after function definition");
+                    reportParserError(error);
+                    return NULL;
+                }
+            }
+        } else if (strcmp(token.value, "return") == 0) {
+            (*tokens)++;
+            ASTNode* returnNode = createNode(AST_RETURN, token);
+            returnNode->left = parseExpression(tokens, error);
+            if ((*tokens)->type == TOKEN_SYMBOL && strcmp((*tokens)->value, ";") == 0) {
+                (*tokens)++;
+            }
+            return returnNode;
+        } else if (strcmp(token.value, "while") == 0) {
+            (*tokens)++;
+            ASTNode* cond = parseExpression(tokens, error);
+            if (strcmp((*tokens)->value, "{") == 0) {
+                (*tokens)++;
+                ASTNode* body = parseBlock(tokens, error);
+                ASTNode* whileNode = createNode(AST_WHILE_LOOP, token);
+                whileNode->left = cond;
+                whileNode->body = body;
+                return whileNode;
+            }
+        } else if (strcmp(token.value, "if") == 0) {
+            (*tokens)++;
+            ASTNode* cond = parseExpression(tokens, error);
+            if (strcmp((*tokens)->value, "{") == 0) {
+                (*tokens)++;
+                ASTNode* body = parseBlock(tokens, error);
+                ASTNode* ifNode = createNode(AST_IF_STATEMENT, token);
+                ifNode->left = cond;
+                ifNode->body = body;
+                return ifNode;
+            }
+        } else if (strcmp(token.value, "print") == 0) {
+            (*tokens)++;
+            ASTNode* expr = parseExpression(tokens, error);
+            ASTNode* printNode = createNode(AST_PRINT, token);
+            printNode->left = expr;
+            if ((*tokens)->type == TOKEN_SYMBOL && strcmp((*tokens)->value, ";") == 0) {
+                (*tokens)++;
+            }
+            return printNode;
+        }
+    }
+
+    if (token.type == TOKEN_IDENTIFIER || token.type == TOKEN_NUMBER) {
+        (*tokens)++;
+        if (token.type == TOKEN_IDENTIFIER && (*tokens)->type == TOKEN_OPERATOR && strcmp((*tokens)->value, "=") == 0) {
+            // Assignment: identifier = expression
+            (*tokens)++;
+            ASTNode* expr = parseExpression(tokens, error);
+            ASTNode* assignNode = createNode(AST_VAR_ASSIGN, token);
+            assignNode->right = expr;
+            if ((*tokens)->type == TOKEN_SYMBOL && strcmp((*tokens)->value, ";") == 0) {
+                (*tokens)++;
+            }
+            return assignNode;
+        } else if (token.type == TOKEN_NUMBER) {
+            // Just a number (for print, return, etc.)
+            ASTNode* numberNode = createNode(AST_EXPRESSION, token);
+            if ((*tokens)->type == TOKEN_SYMBOL && strcmp((*tokens)->value, ";") == 0) {
+                (*tokens)++;
+            }
+            return numberNode;
+        } else {
+            snprintf(error->message, sizeof(error->message), "Expected '=' after identifier");
+            reportParserError(error);
+            return NULL;
+        }
+    }
+
+    snprintf(error->message, sizeof(error->message), "Unexpected token '%s'", token.value);
+    reportParserError(error);
+    return NULL;
 }
 
 ASTNode* parseBlock(Token** tokens, ParserError* error) {
     ASTNode* head = NULL;
     ASTNode* current = NULL;
 
-    while ((*tokens)->type != TOKEN_EOF && (*tokens)->type != TOKEN_SYMBOL && strcmp((*tokens)->value, "}") != 0) {
+    while ((*tokens)->type != TOKEN_EOF && !((*tokens)->type == TOKEN_SYMBOL && strcmp((*tokens)->value, "}") == 0)) {
         ASTNode* stmt = parseStatement(tokens, error);
         if (stmt != NULL) {
             if (head == NULL) {
@@ -66,72 +186,45 @@ ASTNode* parseBlock(Token** tokens, ParserError* error) {
     return head;
 }
 
-ASTNode* parseStatement(Token** tokens, ParserError* error) {
-    Token token = **tokens;
-
-    if (token.type == TOKEN_IDENTIFIER) {
-        // Parse assignment or function call
-        (*tokens)++;
-        if ((*tokens)->type == TOKEN_OPERATOR && strcmp((*tokens)->value, "=") == 0) {
-            // Assignment
-            (*tokens)++;
-            ASTNode* expr = parseExpression(tokens, error);
-            ASTNode* assignNode = createNode(token);
-            assignNode->right = expr;
-            return assignNode;
-        } else {
-            snprintf(error->message, sizeof(error->message), "Expected '=' after identifier");
-            reportParserError(error);
-            return NULL;
-        }
-    } else if (token.type == TOKEN_KEYWORD) {
-        if (strcmp(token.value, "if") == 0) {
-            // Parse if statement
-            (*tokens)++;
-            ASTNode* cond = parseExpression(tokens, error);
-            ASTNode* thenBranch = parseBlock(tokens, error);
-            ASTNode* ifNode = createNode(token);
-            ifNode->left = cond;
-            ifNode->right = thenBranch;
-
-            // Check for else branch
-            if ((*tokens)->type == TOKEN_KEYWORD && strcmp((*tokens)->value, "else") == 0) {
-                (*tokens)++;
-                ASTNode* elseBranch = parseBlock(tokens, error);
-                ifNode->next = elseBranch;
-            }
-
-            return ifNode;
-        } else if (strcmp(token.value, "while") == 0) {
-            // Parse while loop
-            (*tokens)++;
-            ASTNode* cond = parseExpression(tokens, error);
-            ASTNode* body = parseBlock(tokens, error);
-            ASTNode* whileNode = createNode(token);
-            whileNode->left = cond;
-            whileNode->right = body;
-            return whileNode;
-        }
-    }
-
-    snprintf(error->message, sizeof(error->message), "Unexpected token '%s'", token.value);
-    reportParserError(error);
-    return NULL;  // Error case
-}
-
-ASTNode* parseExpression(Token** tokens, ParserError* error) {
-    ASTNode* node = createNode(**tokens);
-    (*tokens)++;
-    return node;
+ASTNode* parse(Token* tokens) {
+    ParserError error = {0, 0, ""};
+    return parseBlock(&tokens, &error);
 }
 
 void printAST(ASTNode* node, int depth) {
     if (node == NULL) return;
 
     for (int i = 0; i < depth; i++) printf("  ");
-    printf("%s\n", node->token.value);
+
+    switch (node->nodeType) {
+        case AST_FUNC_DEF:
+            printf("Function: %s\n", node->token.value);
+            break;
+        case AST_RETURN:
+            printf("Return\n");
+            break;
+        case AST_VAR_ASSIGN:
+            printf("Assign: %s\n", node->token.value);
+            break;
+        case AST_PRINT:
+            printf("Print\n");
+            break;
+        case AST_WHILE_LOOP:
+            printf("While\n");
+            break;
+        case AST_IF_STATEMENT:
+            printf("If\n");
+            break;
+        case AST_EXPRESSION:
+            printf("Expr: %s\n", node->token.value);
+            break;
+        default:
+            printf("Unknown\n");
+            break;
+    }
 
     printAST(node->left, depth + 1);
     printAST(node->right, depth + 1);
+    printAST(node->body, depth + 1);
     printAST(node->next, depth);
 }

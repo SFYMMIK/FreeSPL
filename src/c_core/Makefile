@@ -1,25 +1,12 @@
-# Makefile - Build system for FreeSPL
-
 CC = gcc
-CFLAGS = -Wall -O2
-TARGET = freespl
+CFLAGS = -Wall -Wextra -O2
+SRC = main.c lexer.c parser.c memory.c error_handling.c executor.c token.c
+OBJ = $(SRC:.c=.o)
 
-all: libcore.a $(TARGET)
+all: freespl
 
-libcore.a: lexer.o parser.o memory.o math.o
-	ar rcs libcore.a lexer.o parser.o memory.o math.o
-
-lexer.o: ../src/c_core/lexer.c
-	$(CC) $(CFLAGS) -c ../src/c_core/lexer.c
-
-parser.o: ../src/c_core/parser.c
-	$(CC) $(CFLAGS) -c ../src/c_core/parser.c
-
-memory.o: ../src/c_core/memory.c
-	$(CC) $(CFLAGS) -c ../src/c_core/memory.c
-
-math.o: ../src/c_core/math.c
-	$(CC) $(CFLAGS) -c ../src/c_core/math.c
+freespl: $(OBJ)
+	$(CC) $(CFLAGS) -o freespl $(OBJ)
 
 clean:
-	rm -f *.o *.a $(TARGET)
+	rm -f *.o freespl

@@ -1,0 +1,5 @@
+func main() {
+    x = 8;
+    print x;
+    return 0;
+}

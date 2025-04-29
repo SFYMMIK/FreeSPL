@@ -1,6 +1,9 @@
 #ifndef LEXER_H
 #define LEXER_H
 
-void lex(const char* input);
+#include "token.h"
+#include "error_handling.h"
 
-#endif
+Token* lex(const char* input, int* token_count);
+
+#endif // LEXER_H

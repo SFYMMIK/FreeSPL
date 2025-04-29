@@ -1,8 +1,8 @@
 #include "error_handling.h"
 #include <stdio.h>
-#include <stdlib.h>
 
-void handle_error(const char *error_message) {
-    fprintf(stderr, "Runtime Error: %s\n", error_message);
-    exit(EXIT_FAILURE);
+void reportLexerError(LexerError* error) {
+    if (error != NULL) {
+        printf("Lexer Error [Line %d, Column %d]: %s\n", error->line, error->column, error->message);
+    }
 }

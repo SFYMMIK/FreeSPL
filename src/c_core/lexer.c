@@ -1,35 +1,18 @@
+#include "lexer.h"
+#include "error_handling.h"
+#include "token.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
 
 #define MAX_TOKEN_SIZE 100
-
-typedef enum {
-    TOKEN_IDENTIFIER,
-    TOKEN_NUMBER,
-    TOKEN_OPERATOR,
-    TOKEN_KEYWORD,
-    TOKEN_SYMBOL,
-    TOKEN_EOF,
-    TOKEN_UNKNOWN
-} TokenType;
-
-typedef struct {
-    TokenType type;
-    char value[MAX_TOKEN_SIZE];
-} Token;
-
-typedef struct {
-    int line;
-    int column;
-    char message[256];
-} LexerError;
+#define MAX_TOKENS 1024
 
 const char* keywords[] = {"if", "else", "while", "for", "return", "int", "float", "void"};
 
 int isKeyword(const char* str) {
-    for (int i = 0; i < sizeof(keywords)/sizeof(keywords[0]); i++) {
+    for (int i = 0; i < (int)(sizeof(keywords)/sizeof(keywords[0])); i++) {
         if (strcmp(str, keywords[i]) == 0) {
             return 1;
         }
@@ -37,16 +20,11 @@ int isKeyword(const char* str) {
     return 0;
 }
 
-void reportLexerError(LexerError* error) {
-    if (error != NULL) {
-        printf("Lexer Error [Line %d, Column %d]: %s\n", error->line, error->column, error->message);
-    }
-}
+Token* lex(const char* input, int* token_count) {
+    static Token tokens[MAX_TOKENS];
+    int count = 0;
 
-void lex(const char* input) {
     const char* p = input;
-    Token token;
-    LexerError error = {0, 0, ""};
     int line = 1;
     int column = 1;
 
@@ -58,12 +36,13 @@ void lex(const char* input) {
             } else {
                 column++;
             }
-            p++;  // Skip whitespace
+            p++;
             continue;
         }
 
+        Token token;
+
         if (isalpha(*p)) {
-            // Identifier or keyword
             int len = 0;
             while (isalnum(*p) && len < MAX_TOKEN_SIZE - 1) {
                 token.value[len++] = *p++;
@@ -72,13 +51,10 @@ void lex(const char* input) {
             token.value[len] = '\0';
             if (isKeyword(token.value)) {
                 token.type = TOKEN_KEYWORD;
-                printf("Token: Keyword (%s)\n", token.value);
             } else {
                 token.type = TOKEN_IDENTIFIER;
-                printf("Token: Identifier (%s)\n", token.value);
             }
         } else if (isdigit(*p)) {
-            // Number
             int len = 0;
             while (isdigit(*p) && len < MAX_TOKEN_SIZE - 1) {
                 token.value[len++] = *p++;
@@ -86,9 +62,7 @@ void lex(const char* input) {
             }
             token.value[len] = '\0';
             token.type = TOKEN_NUMBER;
-            printf("Token: Number (%s)\n", token.value);
         } else if (*p == '+' || *p == '-' || *p == '*' || *p == '/' || *p == '=' || *p == '!' || *p == '<' || *p == '>') {
-            // Operator
             int len = 0;
             while ((*p == '=' || *p == '!' || *p == '<' || *p == '>') && len < MAX_TOKEN_SIZE - 1) {
                 token.value[len++] = *p++;
@@ -100,27 +74,31 @@ void lex(const char* input) {
             }
             token.value[len] = '\0';
             token.type = TOKEN_OPERATOR;
-            printf("Token: Operator (%s)\n", token.value);
-        } else if (*p == '(' || *p == ')' || *p == '{' || *p == '}' || *p == ';') {
-            // Symbols
+        } else if (*p == '(' || *p == ')' || *p == '{' || *p == '}' || *p == ';' || *p == ',') {
             token.value[0] = *p++;
             token.value[1] = '\0';
             token.type = TOKEN_SYMBOL;
-            printf("Token: Symbol (%s)\n", token.value);
             column++;
         } else {
-            // Unknown character
+            LexerError error;
             snprintf(error.message, sizeof(error.message), "Unexpected character '%c'", *p);
             error.line = line;
             error.column = column;
             reportLexerError(&error);
             p++;
             column++;
+            continue;
         }
+
+        tokens[count++] = token;
     }
 
-    // End of file token
-    token.type = TOKEN_EOF;
-    strcpy(token.value, "EOF");
-    printf("Token: EOF\n");
+    // Add EOF token
+    Token eof_token;
+    eof_token.type = TOKEN_EOF;
+    strcpy(eof_token.value, "EOF");
+    tokens[count++] = eof_token;
+
+    *token_count = count;
+    return tokens;
 }
