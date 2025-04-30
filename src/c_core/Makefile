@@ -1,12 +1,12 @@
 CC = gcc
 CFLAGS = -Wall -Wextra -O2
-SRC = main.c lexer.c parser.c debugger.c error_handling.c executor.c token.c
-OBJ = $(SRC:.c=.o)
+OBJS = main.o lexer.o parser.o executor.o token.o error_handling.o debugger.o
 
-all: freespl
+freespl: $(OBJS)
+	$(CC) $(CFLAGS) -o freespl $(OBJS)
 
-freespl: $(OBJ)
-	$(CC) $(CFLAGS) -o freespl $(OBJ)
+%.o: %.c
+	$(CC) $(CFLAGS) -c -o $@ $<
 
 clean:
-	rm -f *.o freespl
+	rm -f $(OBJS) freespl

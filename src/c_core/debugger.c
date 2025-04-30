@@ -1,8 +1,8 @@
 #include "debugger.h"
 #include "token.h"
-#include "parser.h"
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 int isImportUsed(ASTNode* node, const char* importName) {
     if (node == NULL) return 0;

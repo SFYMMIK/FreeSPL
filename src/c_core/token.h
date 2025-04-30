@@ -9,8 +9,9 @@ typedef enum {
     TOKEN_SYMBOL,
     TOKEN_EOF,
     TOKEN_UNKNOWN,
-    TOKEN_IMPORT,         // <-- added
-    TOKEN_IMPORT_FROM_C   // <-- added
+    TOKEN_IMPORT,
+    TOKEN_IMPORT_FROM_C,
+    TOKEN_STRING
 } TokenType;
 
 typedef struct {

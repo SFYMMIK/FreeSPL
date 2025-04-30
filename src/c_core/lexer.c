@@ -2,7 +2,6 @@
 #include "error_handling.h"
 #include "token.h"
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
 
@@ -11,14 +10,12 @@
 
 const char* keywords[] = {
     "if", "else", "while", "for", "return", "int", "float", "void",
-    "func", "print", "input"
+    "func", "print", "input", "break", "loop"
 };
 
 int isKeyword(const char* str) {
     for (int i = 0; i < (int)(sizeof(keywords) / sizeof(keywords[0])); i++) {
-        if (strcmp(str, keywords[i]) == 0) {
-            return 1;
-        }
+        if (strcmp(str, keywords[i]) == 0) return 1;
     }
     return 0;
 }
@@ -26,21 +23,14 @@ int isKeyword(const char* str) {
 Token* lex(const char* input, int* token_count) {
     static Token tokens[MAX_TOKENS];
     int count = 0;
-
     const char* p = input;
-    int line = 1;
-    int column = 1;
+    int line = 1, column = 1;
 
     while (*p != '\0') {
         if (isspace(*p)) {
-            if (*p == '\n') {
-                line++;
-                column = 1;
-            } else {
-                column++;
-            }
-            p++;
-            continue;
+            if (*p == '\n') { line++; column = 1; }
+            else { column++; }
+            p++; continue;
         }
 
         Token token;
@@ -51,9 +41,8 @@ Token* lex(const char* input, int* token_count) {
                 while (*p && *p != '<') p++;
                 p++;
                 int len = 0;
-                while (*p && *p != '>' && len < MAX_TOKEN_SIZE - 1) {
+                while (*p && *p != '>' && len < MAX_TOKEN_SIZE - 1)
                     token.value[len++] = *p++;
-                }
                 token.value[len] = '\0';
                 token.type = TOKEN_IMPORT_FROM_C;
                 if (*p == '>') p++;
@@ -64,9 +53,8 @@ Token* lex(const char* input, int* token_count) {
                 while (*p && *p != '"') p++;
                 p++;
                 int len = 0;
-                while (*p && *p != '"' && len < MAX_TOKEN_SIZE - 1) {
+                while (*p && *p != '"' && len < MAX_TOKEN_SIZE - 1)
                     token.value[len++] = *p++;
-                }
                 token.value[len] = '\0';
                 token.type = TOKEN_IMPORT;
                 if (*p == '"') p++;
@@ -75,40 +63,44 @@ Token* lex(const char* input, int* token_count) {
             }
         }
 
+        if (*p == '"') {
+            p++; int len = 0;
+            while (*p && *p != '"' && len < MAX_TOKEN_SIZE - 1)
+                token.value[len++] = *p++;
+            token.value[len] = '\0';
+            token.type = TOKEN_IDENTIFIER;
+            if (*p == '"') p++;
+            tokens[count++] = token;
+            continue;
+        }
+
         if (isalpha(*p)) {
             int len = 0;
-            while (isalnum(*p) && len < MAX_TOKEN_SIZE - 1) {
+            while (isalnum(*p) && len < MAX_TOKEN_SIZE - 1)
                 token.value[len++] = *p++;
-                column++;
-            }
             token.value[len] = '\0';
             token.type = isKeyword(token.value) ? TOKEN_KEYWORD : TOKEN_IDENTIFIER;
         } else if (isdigit(*p)) {
             int len = 0;
-            while (isdigit(*p) && len < MAX_TOKEN_SIZE - 1) {
+            while (isdigit(*p) && len < MAX_TOKEN_SIZE - 1)
                 token.value[len++] = *p++;
-                column++;
-            }
             token.value[len] = '\0';
             token.type = TOKEN_NUMBER;
         } else if (strchr("+-*/=!<>", *p)) {
             token.value[0] = *p++;
             token.value[1] = '\0';
             token.type = TOKEN_OPERATOR;
-            column++;
         } else if (strchr("(){};,", *p)) {
             token.value[0] = *p++;
             token.value[1] = '\0';
             token.type = TOKEN_SYMBOL;
-            column++;
         } else {
             LexerError error;
             snprintf(error.message, sizeof(error.message), "Unexpected character '%c'", *p);
             error.line = line;
             error.column = column;
             reportLexerError(&error);
-            p++;
-            column++;
+            p++; column++;
             continue;
         }
 

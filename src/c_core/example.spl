@@ -1,20 +1,25 @@
 func main() {
-    x = 8;
-    y = 2;
+    x = 0;
 
-    print x;
-    print y;
-
-    input "Enter your name:";
-
-    if 1 {
+    while x < 5 {
+        print "Initial x:";
         print x;
+
+        if x == 2 {
+            print "Continue when x is 2";
+            loop();
+        }
+
+        if x == 4 {
+            print "Breaking at x = 4";
+            break;
+        }
+
+        x = x + 1;
     }
 
-    while 1 {
-        print y;
-        return 0;
-    }
+    print "Loop finished";
 
+    input "Enter a number:";
     return 0;
 }

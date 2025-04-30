@@ -2,17 +2,32 @@
 #include "parser.h"
 #include "executor.h"
 #include "error_handling.h"
-#include "debugger.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 int main(int argc, char *argv[]) {
+    int debug = 0;
+    const char *filename = NULL;
+
     if (argc < 2) {
-        fprintf(stderr, "Usage: %s <source_file.spl>\n", argv[0]);
+        fprintf(stderr, "Usage: %s [--debug] <source_file.spl>\n", argv[0]);
         return 1;
     }
 
-    const char *filename = argv[1];
+    for (int i = 1; i < argc; ++i) {
+        if (strcmp(argv[i], "--debug") == 0) {
+            debug = 1;
+        } else {
+            filename = argv[i];
+        }
+    }
+
+    if (!filename) {
+        fprintf(stderr, "Error: No source file specified.\n");
+        return 1;
+    }
+
     FILE *file = fopen(filename, "r");
     if (!file) {
         perror("Failed to open file");
@@ -45,12 +60,12 @@ int main(int argc, char *argv[]) {
 
     ASTNode* ast = parse(tokens);
 
-    printf("[AST]\n");
-    printAST(ast, 0);
+    if (debug) {
+        printf("[AST]\n");
+        printAST(ast, 0);
+    }
 
-    // Call the debugger here before executing
-    debuggerCheck(tokens, token_count, ast);
-
+    set_debug_mode(debug);
     execute_program(ast);
 
     free(source);
