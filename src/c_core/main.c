@@ -2,6 +2,7 @@
 #include "parser.h"
 #include "executor.h"
 #include "error_handling.h"
+#include "debugger.h"
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -47,7 +48,10 @@ int main(int argc, char *argv[]) {
     printf("[AST]\n");
     printAST(ast, 0);
 
-    execute(ast);
+    // Call the debugger here before executing
+    debuggerCheck(tokens, token_count, ast);
+
+    execute_program(ast);
 
     free(source);
     return 0;

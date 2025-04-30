@@ -13,31 +13,47 @@ void execute(ASTNode* node) {
                     printf("%s\n", node->left->token.value);
                 }
                 break;
+
             case AST_RETURN:
                 if (node->left != NULL) {
                     printf("[Return] %s\n", node->left->token.value);
                 }
-                return; // stop execution after return
+                return;
+
             case AST_VAR_ASSIGN:
-                printf("[Assign] %s = %s\n", node->token.value, node->right->token.value);
+                if (node->right != NULL) {
+                    printf("[Assign] %s = %s\n", node->token.value, node->right->token.value);
+                } else {
+                    printf("[Assign] %s = (null)\n", node->token.value);
+                }
                 break;
+
             case AST_IF_STATEMENT:
-                if (node->left && strcmp(node->left->token.value, "1") == 0) {
+                if (node->left && strcmp(node->left->token.value, "1") == 0)
                     execute(node->body);
-                }
                 break;
+
             case AST_WHILE_LOOP:
-                // Simple simulation: only executes once if condition is "1"
-                if (node->left && strcmp(node->left->token.value, "1") == 0) {
+                if (node->left && strcmp(node->left->token.value, "1") == 0)
                     execute(node->body);
-                }
                 break;
+
             case AST_FUNC_DEF:
                 printf("[Function Defined] %s\n", node->token.value);
                 execute(node->body);
                 break;
+
+            case AST_INPUT:
+                if (node->left != NULL) {
+                    printf("%s", node->left->token.value);
+                }
+                char buffer[256];
+                fgets(buffer, sizeof(buffer), stdin);
+                buffer[strcspn(buffer, "\n")] = '\0';
+                printf("[Input Received] %s\n", buffer);
+                break;
+
             default:
-                // Other types like expressions
                 break;
         }
 

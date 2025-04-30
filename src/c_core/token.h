@@ -2,15 +2,15 @@
 #define TOKEN_H
 
 typedef enum {
-    TOKEN_INT,
-    TOKEN_FLOAT,
     TOKEN_IDENTIFIER,
+    TOKEN_NUMBER,
     TOKEN_OPERATOR,
     TOKEN_KEYWORD,
     TOKEN_SYMBOL,
-    TOKEN_NUMBER,
     TOKEN_EOF,
-    TOKEN_UNKNOWN
+    TOKEN_UNKNOWN,
+    TOKEN_IMPORT,         // <-- added
+    TOKEN_IMPORT_FROM_C   // <-- added
 } TokenType;
 
 typedef struct {
@@ -18,4 +18,4 @@ typedef struct {
     char value[100];
 } Token;
 
-#endif // TOKEN_H
+#endif

@@ -12,7 +12,8 @@ typedef enum {
     AST_WHILE_LOOP,
     AST_IF_STATEMENT,
     AST_EXPRESSION,
-    AST_PRINT
+    AST_PRINT,
+    AST_INPUT    // <-- ADDED HERE
 } ASTNodeType;
 
 // Parser error structure

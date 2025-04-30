@@ -1,8 +1,17 @@
 # FreeSPL
-is a modern approach at connecting pythom + go + C syntax for fast coding, it is a not complex project made for fun, if you want you can take it seriously or you dont have to, FreeSPL is designed to give you compatibility with C + C libraries like glibc
+is a modern approach at connecting pythom + go + C syntax for fast coding, it is a not complex project made for fun, if you want you can take it seriously or you dont have to, FreeSPL is designed to give you compatibility with assembly + you can make .splh libraries for FreeSPL in assembly that way in the future
+
+## main update:
+- added input
+- fix some things
+- some errors will appear sometimes which do nothing
+- the newly added input is till broken where it prints only one word
+
+## lil update to example.spl:
+- just more things in it like yk input n shit
 
 > [!WARNING]
-> FreeSPL-stable is right now a interpreted language but will be made to be compiled soon
+> FreeSPL-stable is right now a interpreted language but will stay that way for now because its easier to develop
 
 # How to use:
 

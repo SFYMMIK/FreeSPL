@@ -9,10 +9,13 @@
 #define MAX_TOKEN_SIZE 100
 #define MAX_TOKENS 1024
 
-const char* keywords[] = {"if", "else", "while", "for", "return", "int", "float", "void"};
+const char* keywords[] = {
+    "if", "else", "while", "for", "return", "int", "float", "void",
+    "func", "print", "input"
+};
 
 int isKeyword(const char* str) {
-    for (int i = 0; i < (int)(sizeof(keywords)/sizeof(keywords[0])); i++) {
+    for (int i = 0; i < (int)(sizeof(keywords) / sizeof(keywords[0])); i++) {
         if (strcmp(str, keywords[i]) == 0) {
             return 1;
         }
@@ -42,6 +45,36 @@ Token* lex(const char* input, int* token_count) {
 
         Token token;
 
+        if (*p == '#') {
+            if (strncmp(p, "#import_from_c", 14) == 0) {
+                p += 14;
+                while (*p && *p != '<') p++;
+                p++;
+                int len = 0;
+                while (*p && *p != '>' && len < MAX_TOKEN_SIZE - 1) {
+                    token.value[len++] = *p++;
+                }
+                token.value[len] = '\0';
+                token.type = TOKEN_IMPORT_FROM_C;
+                if (*p == '>') p++;
+                tokens[count++] = token;
+                continue;
+            } else if (strncmp(p, "#import", 7) == 0) {
+                p += 7;
+                while (*p && *p != '"') p++;
+                p++;
+                int len = 0;
+                while (*p && *p != '"' && len < MAX_TOKEN_SIZE - 1) {
+                    token.value[len++] = *p++;
+                }
+                token.value[len] = '\0';
+                token.type = TOKEN_IMPORT;
+                if (*p == '"') p++;
+                tokens[count++] = token;
+                continue;
+            }
+        }
+
         if (isalpha(*p)) {
             int len = 0;
             while (isalnum(*p) && len < MAX_TOKEN_SIZE - 1) {
@@ -49,11 +82,7 @@ Token* lex(const char* input, int* token_count) {
                 column++;
             }
             token.value[len] = '\0';
-            if (isKeyword(token.value)) {
-                token.type = TOKEN_KEYWORD;
-            } else {
-                token.type = TOKEN_IDENTIFIER;
-            }
+            token.type = isKeyword(token.value) ? TOKEN_KEYWORD : TOKEN_IDENTIFIER;
         } else if (isdigit(*p)) {
             int len = 0;
             while (isdigit(*p) && len < MAX_TOKEN_SIZE - 1) {
@@ -62,19 +91,12 @@ Token* lex(const char* input, int* token_count) {
             }
             token.value[len] = '\0';
             token.type = TOKEN_NUMBER;
-        } else if (*p == '+' || *p == '-' || *p == '*' || *p == '/' || *p == '=' || *p == '!' || *p == '<' || *p == '>') {
-            int len = 0;
-            while ((*p == '=' || *p == '!' || *p == '<' || *p == '>') && len < MAX_TOKEN_SIZE - 1) {
-                token.value[len++] = *p++;
-                column++;
-            }
-            if (len == 0) {
-                token.value[len++] = *p++;
-                column++;
-            }
-            token.value[len] = '\0';
+        } else if (strchr("+-*/=!<>", *p)) {
+            token.value[0] = *p++;
+            token.value[1] = '\0';
             token.type = TOKEN_OPERATOR;
-        } else if (*p == '(' || *p == ')' || *p == '{' || *p == '}' || *p == ';' || *p == ',') {
+            column++;
+        } else if (strchr("(){};,", *p)) {
             token.value[0] = *p++;
             token.value[1] = '\0';
             token.type = TOKEN_SYMBOL;
@@ -93,7 +115,6 @@ Token* lex(const char* input, int* token_count) {
         tokens[count++] = token;
     }
 
-    // Add EOF token
     Token eof_token;
     eof_token.type = TOKEN_EOF;
     strcpy(eof_token.value, "EOF");

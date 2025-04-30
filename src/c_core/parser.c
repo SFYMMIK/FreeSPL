@@ -126,13 +126,20 @@ ASTNode* parseStatement(Token** tokens, ParserError* error) {
                 (*tokens)++;
             }
             return printNode;
+        } else if (strcmp(token.value, "input") == 0) {
+            (*tokens)++;
+            ASTNode* expr = createNode(AST_INPUT, token);
+            expr->left = parseExpression(tokens, error); // the prompt
+            if ((*tokens)->type == TOKEN_SYMBOL && strcmp((*tokens)->value, ";") == 0) {
+                (*tokens)++;
+            }
+            return expr;
         }
     }
 
     if (token.type == TOKEN_IDENTIFIER || token.type == TOKEN_NUMBER) {
         (*tokens)++;
         if (token.type == TOKEN_IDENTIFIER && (*tokens)->type == TOKEN_OPERATOR && strcmp((*tokens)->value, "=") == 0) {
-            // Assignment: identifier = expression
             (*tokens)++;
             ASTNode* expr = parseExpression(tokens, error);
             ASTNode* assignNode = createNode(AST_VAR_ASSIGN, token);
@@ -142,7 +149,6 @@ ASTNode* parseStatement(Token** tokens, ParserError* error) {
             }
             return assignNode;
         } else if (token.type == TOKEN_NUMBER) {
-            // Just a number (for print, return, etc.)
             ASTNode* numberNode = createNode(AST_EXPRESSION, token);
             if ((*tokens)->type == TOKEN_SYMBOL && strcmp((*tokens)->value, ";") == 0) {
                 (*tokens)++;
@@ -178,7 +184,7 @@ ASTNode* parseBlock(Token** tokens, ParserError* error) {
 
     if ((*tokens)->type == TOKEN_SYMBOL && strcmp((*tokens)->value, "}") == 0) {
         (*tokens)++;
-    } else {
+    } else if ((*tokens)->type != TOKEN_EOF) {
         snprintf(error->message, sizeof(error->message), "Expected '}' at end of block");
         reportParserError(error);
     }
@@ -208,6 +214,9 @@ void printAST(ASTNode* node, int depth) {
             break;
         case AST_PRINT:
             printf("Print\n");
+            break;
+        case AST_INPUT:
+            printf("Input\n");
             break;
         case AST_WHILE_LOOP:
             printf("While\n");
