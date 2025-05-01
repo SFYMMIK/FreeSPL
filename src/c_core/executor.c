@@ -74,14 +74,21 @@ int evaluate_expression(ASTNode* node) {
 void execute(ASTNode* node);
 
 void executeLoopBody(ASTNode* body) {
-    if (setjmp(break_jmp) == 0) {
+    jmp_buf break_buf;
+    jmp_buf continue_buf;
+
+    memcpy(break_jmp, break_buf, sizeof(jmp_buf));
+    memcpy(continue_jmp, continue_buf, sizeof(jmp_buf));
+
+    if (setjmp(break_buf) == 0) {
         while (1) {
-            if (setjmp(continue_jmp) == 0) {
+            if (setjmp(continue_buf) == 0) {
                 execute(body);
             }
         }
     }
 }
+
 
 void execute(ASTNode* node) {
     while (node != NULL) {
@@ -100,8 +107,7 @@ void execute(ASTNode* node) {
             case AST_RETURN:
                 if (node->left) {
                     int result = evaluate_expression(node->left);
-                    if (debug_mode)
-                        printf("[Return] %d\n", result);
+                    if (debug_mode) printf("[Return] %d\n", result);
                 }
                 return;
 
@@ -150,11 +156,12 @@ void execute(ASTNode* node) {
 
             case AST_LOOP:
                 longjmp(continue_jmp, 1);
-                break;
+                return;
+
 
             case AST_BREAK:
                 longjmp(break_jmp, 1);
-                break;
+                return;
 
             default:
                 break;
