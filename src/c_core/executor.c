@@ -1,71 +1,31 @@
-#include "executor.h"
-#include "token.h"
 #include "parser.h"
+#include "token.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <setjmp.h>
 
-static int debug_mode = 0;
-static jmp_buf break_jmp;
-static jmp_buf continue_jmp;
-
-#define MAX_VARIABLES 100
-
-typedef struct {
-    char name[100];
-    char value[256];
-} Variable;
-
-static Variable variables[MAX_VARIABLES];
-static int variable_count = 0;
-
-void set_debug_mode(int enabled) {
-    debug_mode = enabled;
-}
-
+// Symulacja zmiennych — uproszczona
 const char* get_variable_value(const char* name) {
-    for (int i = 0; i < variable_count; i++) {
-        if (strcmp(variables[i].name, name) == 0) {
-            return variables[i].value;
-        }
-    }
-    return NULL;
+    return NULL; // Zmiennych nie obsługujemy jeszcze
 }
 
-void set_variable_value(const char* name, const char* value) {
-    for (int i = 0; i < variable_count; i++) {
-        if (strcmp(variables[i].name, name) == 0) {
-            strcpy(variables[i].value, value);
-            return;
-        }
-    }
-    if (variable_count < MAX_VARIABLES) {
-        strcpy(variables[variable_count].name, name);
-        strcpy(variables[variable_count].value, value);
-        variable_count++;
-    }
-}
-
-int evaluate_expression(ASTNode* node) {
+int evalExpression(ASTNode* node) {
     if (!node) return 0;
-
-    if (node->left && node->right && node->token.type == TOKEN_OPERATOR) {
-        int lhs = evaluate_expression(node->left);
-        int rhs = evaluate_expression(node->right);
-        switch (node->token.value[0]) {
-            case '+': return lhs + rhs;
-            case '-': return lhs - rhs;
-            case '*': return lhs * rhs;
-            case '/': return rhs != 0 ? lhs / rhs : 0;
-        }
-    }
 
     if (node->token.type == TOKEN_NUMBER) {
         return atoi(node->token.value);
-    } else if (node->token.type == TOKEN_IDENTIFIER) {
-        const char* val = get_variable_value(node->token.value);
-        return val ? atoi(val) : 0;
+    }
+
+    if (node->left && node->right && node->token.type == TOKEN_OPERATOR) {
+        int left = evalExpression(node->left);
+        int right = evalExpression(node->right);
+        if (strcmp(node->token.value, "+") == 0) return left + right;
+        if (strcmp(node->token.value, "-") == 0) return left - right;
+        if (strcmp(node->token.value, "*") == 0) return left * right;
+        if (strcmp(node->token.value, "/") == 0) return right != 0 ? left / right : 0;
+        if (strcmp(node->token.value, "=") == 0) return left == right;
+        if (strcmp(node->token.value, "<") == 0) return left < right;
+        if (strcmp(node->token.value, ">") == 0) return left > right;
     }
 
     return 0;
@@ -73,104 +33,94 @@ int evaluate_expression(ASTNode* node) {
 
 void execute(ASTNode* node);
 
-void executeLoopBody(ASTNode* body) {
-    jmp_buf break_buf;
-    jmp_buf continue_buf;
-
-    memcpy(break_jmp, break_buf, sizeof(jmp_buf));
-    memcpy(continue_jmp, continue_buf, sizeof(jmp_buf));
-
-    if (setjmp(break_buf) == 0) {
-        while (1) {
-            if (setjmp(continue_buf) == 0) {
-                execute(body);
-            }
-        }
-    }
-}
-
-
-void execute(ASTNode* node) {
+void executeBlock(ASTNode* node) {
     while (node != NULL) {
-        switch (node->nodeType) {
-            case AST_PRINT:
-                if (node->left) {
-                    if (node->left->token.type == TOKEN_IDENTIFIER) {
-                        const char* val = get_variable_value(node->left->token.value);
-                        printf("%s\n", val ? val : node->left->token.value);
-                    } else {
-                        printf("%s\n", node->left->token.value);
-                    }
-                }
-                break;
-
-            case AST_RETURN:
-                if (node->left) {
-                    int result = evaluate_expression(node->left);
-                    if (debug_mode) printf("[Return] %d\n", result);
-                }
-                return;
-
-            case AST_VAR_ASSIGN: {
-                int result = evaluate_expression(node->right);
-                char str[32];
-                snprintf(str, sizeof(str), "%d", result);
-                set_variable_value(node->token.value, str);
-                if (debug_mode)
-                    printf("[Assign] %s = %s\n", node->token.value, str);
-                break;
-            }
-
-            case AST_IF_STATEMENT:
-                if (evaluate_expression(node->left)) {
-                    execute(node->body);
-                } else if (node->right) {
-                    execute(node->right->body);
-                }
-                break;
-
-            case AST_WHILE_LOOP:
-                while (evaluate_expression(node->left))
-                    executeLoopBody(node->body);
-                break;
-
-            case AST_FUNC_DEF:
-                if (debug_mode)
-                    printf("[Function Defined] %s\n", node->token.value);
-                execute(node->body);
-                break;
-
-            case AST_INPUT:
-                if (node->left != NULL) {
-                    printf("%s", node->left->token.value);
-                }
-                {
-                    char buffer[256];
-                    fgets(buffer, sizeof(buffer), stdin);
-                    buffer[strcspn(buffer, "\n")] = '\0';
-                    set_variable_value("input", buffer);
-                    if (debug_mode)
-                        printf("[Input Received] %s\n", buffer);
-                }
-                break;
-
-            case AST_LOOP:
-                longjmp(continue_jmp, 1);
-                return;
-
-
-            case AST_BREAK:
-                longjmp(break_jmp, 1);
-                return;
-
-            default:
-                break;
-        }
-
+        execute(node);
         node = node->next;
     }
 }
 
-void execute_program(ASTNode* node) {
-    execute(node);
+void execute(ASTNode* node) {
+    if (!node) return;
+
+    switch (node->nodeType) {
+        case AST_FUNC_DEF:
+            if (strcmp(node->token.value, "main") == 0) {
+                executeBlock(node->body);
+            }
+            break;
+
+        case AST_VAR_ASSIGN:
+            // Na razie nie implementujemy zmiennych
+            evalExpression(node->right);
+            break;
+
+        case AST_PRINT:
+            if (node->left) {
+                ASTNode* expr = node->left;
+
+                if (expr->left && expr->right && expr->token.type == TOKEN_OPERATOR) {
+                    int val = evalExpression(expr);
+                    printf("%d\n", val);
+                } else if (expr->token.type == TOKEN_NUMBER) {
+                    printf("%s\n", expr->token.value);
+                } else if (expr->token.type == TOKEN_IDENTIFIER) {
+                    const char* val = get_variable_value(expr->token.value);
+                    printf("%s\n", val ? val : expr->token.value);
+                } else if (expr->nodeType == AST_EXPRESSION) {
+                    printf("%s\n", expr->token.value);
+                } else {
+                    printf("%s\n", expr->token.value);
+                }
+            }
+            break;
+
+        case AST_INPUT:
+            // Pomijamy obsługę input na razie
+            break;
+
+        case AST_IF_STATEMENT: {
+            int cond = evalExpression(node->left);
+            if (cond) {
+                executeBlock(node->body);
+            } else if (node->right) {
+                executeBlock(node->right);
+            }
+            break;
+        }
+
+        case AST_WHILE_LOOP: {
+            while (evalExpression(node->left)) {
+                executeBlock(node->body);
+            }
+            break;
+        }
+
+        case AST_RETURN:
+        case AST_LOOP:
+        case AST_BREAK:
+        case AST_EXPRESSION:
+            // Skipping
+            break;
+
+        default:
+            printf("[UNSUPPORTED NODE TYPE: %d]\n", node->nodeType);
+            break;
+    }
+}
+
+// Globalna flaga debugowania
+static int DEBUG_MODE = 0;
+
+// Ustawianie trybu debugowania z main.c
+void set_debug_mode(int enabled) {
+    DEBUG_MODE = enabled;
+}
+
+// Główna funkcja uruchamiająca program (wołana z main.c)
+void execute_program(ASTNode* root) {
+    if (DEBUG_MODE) {
+        printf("[RUNNING in DEBUG MODE]\n");
+    }
+    execute(root);
 }

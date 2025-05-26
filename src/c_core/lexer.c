@@ -24,51 +24,25 @@ Token* lex(const char* input, int* token_count) {
     static Token tokens[MAX_TOKENS];
     int count = 0;
     const char* p = input;
-    int line = 1, column = 1;
 
     while (*p != '\0') {
+        if (*p == '/' && *(p+1) == '/') {
+            while (*p && *p != '\n') p++;
+            continue;
+        }
+
         if (isspace(*p)) {
-            if (*p == '\n') { line++; column = 1; }
-            else { column++; }
             p++; continue;
         }
 
         Token token;
-
-        if (*p == '#') {
-            if (strncmp(p, "#import_from_c", 14) == 0) {
-                p += 14;
-                while (*p && *p != '<') p++;
-                p++;
-                int len = 0;
-                while (*p && *p != '>' && len < MAX_TOKEN_SIZE - 1)
-                    token.value[len++] = *p++;
-                token.value[len] = '\0';
-                token.type = TOKEN_IMPORT_FROM_C;
-                if (*p == '>') p++;
-                tokens[count++] = token;
-                continue;
-            } else if (strncmp(p, "#import", 7) == 0) {
-                p += 7;
-                while (*p && *p != '"') p++;
-                p++;
-                int len = 0;
-                while (*p && *p != '"' && len < MAX_TOKEN_SIZE - 1)
-                    token.value[len++] = *p++;
-                token.value[len] = '\0';
-                token.type = TOKEN_IMPORT;
-                if (*p == '"') p++;
-                tokens[count++] = token;
-                continue;
-            }
-        }
 
         if (*p == '"') {
             p++; int len = 0;
             while (*p && *p != '"' && len < MAX_TOKEN_SIZE - 1)
                 token.value[len++] = *p++;
             token.value[len] = '\0';
-            token.type = TOKEN_IDENTIFIER;
+            token.type = TOKEN_STRING;
             if (*p == '"') p++;
             tokens[count++] = token;
             continue;
@@ -95,12 +69,7 @@ Token* lex(const char* input, int* token_count) {
             token.value[1] = '\0';
             token.type = TOKEN_SYMBOL;
         } else {
-            LexerError error;
-            snprintf(error.message, sizeof(error.message), "Unexpected character '%c'", *p);
-            error.line = line;
-            error.column = column;
-            reportLexerError(&error);
-            p++; column++;
+            p++;
             continue;
         }
 

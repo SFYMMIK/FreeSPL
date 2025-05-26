@@ -1,0 +1,39 @@
+func main() {
+    x = 0;
+    y = 5;
+
+    print("Start test");
+
+    // test while loop
+    while x < 3 {
+        print "Loop count:";
+        print x;
+        x = x + 1;
+    }
+
+    print("After loop");
+
+    // test if/else
+    if y = 5 {
+        print "y is five";
+    } else {
+        print "y is not five";
+    }
+
+    // simple arithmetic
+    z = 3 + 4;
+    print "Sum z =";
+    print z;
+
+    // direct string
+    print "Done with logic.";
+
+    // simulate loop (continue)
+    loop();
+
+    // input demo (you can enter anything)
+    input "Enter something (ignored):";
+
+    // return value ignored, but should parse
+    return 0;
+}

@@ -1,25 +1,8 @@
 func main() {
-    x = 0;
-
-    while x < 5 {
-        print "Initial x:";
-        print x;
-
-        if x == 2 {
-            print "Continue when x is 2";
-            loop();
-        }
-
-        if x == 4 {
-            print "Breaking at x = 4";
-            break;
-        }
-
-        x = x + 1;
+    y = 5;
+    if y = 2 {
+        print("rowne");
+    } else {
+        print("inne");
     }
-
-    print "Loop finished";
-
-    input "Enter a number:";
-    return 0;
 }

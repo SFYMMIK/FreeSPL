@@ -59,6 +59,11 @@ int main(int argc, char *argv[]) {
     Token* tokens = lex(source, &token_count);
 
     ASTNode* ast = parse(tokens);
+    if (!ast) {
+        fprintf(stderr, "[FATAL] Parser failed. Execution aborted.\n");
+        free(source);
+        return 1;
+    }
 
     if (debug) {
         printf("[AST]\n");
