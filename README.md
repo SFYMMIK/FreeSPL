@@ -11,7 +11,7 @@ is a modern approach at connecting pythom + go + C syntax for fast coding, it is
 - just more things in it like yk input n shit
 
 > [!WARNING]
-> FreeSPL-stable is right now a interpreted language but will stay that way for now because its easier to develop
+> FreeSPL is right now a interpreted language + little news, i SfymmiK am working on FreeSPL compiler :)
 
 # How to use:
 
